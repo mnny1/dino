@@ -1,0 +1,91 @@
+Will run the code on one GPU.
+| distributed init (rank 0): env://
+git:
+  sha: 7c446df5b9f45747937fb0d72314eb9f7b66930a, status: has uncommited changes, branch: main
+arch: uni
+batch_size_per_gpu: 16
+clip_grad: 3.0
+data_path: /mnt/volume/datasets/NCT-CRC-HE-100K/
+dist_url: env://
+drop_path_rate: 0.1
+epochs: 10
+file_extension: .tif
+freeze_last_layer: 1
+global_crops_scale: (0.4, 1.0)
+gpu: 0
+json_path: /mnt/volume/sabrina/cellvit_seg/NCT
+local_crops_number: 8
+local_crops_scale: (0.05, 0.4)
+local_rank: 0
+lr: 0.0005
+min_lr: 1e-06
+model_path: /mnt/volume/mathias/pretrained_models/pytorch_model.bin
+momentum_teacher: 0.996
+norm_last_layer: True
+num_workers: 10
+optimizer: adamw
+out_dim: 65536
+output_dir: /mnt/volume/mathias/outputs/test_dino_output/
+padding: 1
+patch_size: 16
+rank: 0
+saveckp_freq: 2
+seed: 0
+teacher_temp: 0.04
+use_bn_in_head: False
+use_fp16: True
+warmup_epochs: 0
+warmup_teacher_temp: 0.04
+warmup_teacher_temp_epochs: 0
+weight_decay: 0.04
+weight_decay_end: 0.4
+world_size: 1
+Data loaded: there are 64 images.
+Using cache found in /home/mathias/.cache/torch/hub/facebookresearch_xcit_main
+/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/torch/nn/utils/weight_norm.py:28: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+All layers frozen except blocks [21, 22, 23]
+TokenSelectionWrapper for student & teacher
+Student and Teacher are built: they are both uni network.
+Loss, optimizer and schedulers ready.
+Starting DINO training !
+Epoch: [0/10]  [0/4]  eta: 0:00:30  loss: 11.063110 (11.063110)  lr: 0.000031 (0.000031)  wd: 0.040000 (0.040000)  time: 7.667233  data: 2.986526  max mem: 4577
+Epoch: [0/10]  [3/4]  eta: 0:00:02  loss: 10.938888 (10.968443)  lr: 0.000031 (0.000031)  wd: 0.040555 (0.041936)  time: 2.138843  data: 0.746718  max mem: 5094
+Epoch: [0/10] Total time: 0:00:09 (2.274039 s / it)
+Averaged stats: loss: 10.938888 (10.968443)  lr: 0.000031 (0.000031)  wd: 0.040555 (0.041936)
+Epoch: [1/10]  [0/4]  eta: 0:00:13  loss: 10.930016 (10.930016)  lr: 0.000031 (0.000031)  wd: 0.048810 (0.048810)  time: 3.367820  data: 3.069568  max mem: 5094
+Epoch: [1/10]  [3/4]  eta: 0:00:01  loss: 10.951680 (10.958212)  lr: 0.000030 (0.000030)  wd: 0.053702 (0.057164)  time: 1.069634  data: 0.767457  max mem: 5284
+Epoch: [1/10] Total time: 0:00:04 (1.158216 s / it)
+Averaged stats: loss: 10.951680 (10.958212)  lr: 0.000030 (0.000030)  wd: 0.053702 (0.057164)
+Epoch: [2/10]  [0/4]  eta: 0:00:10  loss: 11.019961 (11.019961)  lr: 0.000028 (0.000028)  wd: 0.074377 (0.074377)  time: 2.720587  data: 2.403669  max mem: 5286
+Epoch: [2/10]  [3/4]  eta: 0:00:00  loss: 11.029993 (11.044796)  lr: 0.000027 (0.000027)  wd: 0.083127 (0.088331)  time: 0.899726  data: 0.600975  max mem: 5286
+Epoch: [2/10] Total time: 0:00:03 (0.943964 s / it)
+Averaged stats: loss: 11.029993 (11.044796)  lr: 0.000027 (0.000027)  wd: 0.083127 (0.088331)
+Epoch: [3/10]  [0/4]  eta: 0:00:10  loss: 11.081852 (11.081852)  lr: 0.000025 (0.000025)  wd: 0.114199 (0.114199)  time: 2.689914  data: 2.376621  max mem: 5286
+Epoch: [3/10]  [3/4]  eta: 0:00:00  loss: 11.107028 (11.114024)  lr: 0.000023 (0.000023)  wd: 0.125950 (0.132387)  time: 0.892129  data: 0.594216  max mem: 5286
+Epoch: [3/10] Total time: 0:00:03 (0.934057 s / it)
+Averaged stats: loss: 11.107028 (11.114024)  lr: 0.000023 (0.000023)  wd: 0.125950 (0.132387)
+Epoch: [4/10]  [0/4]  eta: 0:00:10  loss: 11.174815 (11.174815)  lr: 0.000021 (0.000021)  wd: 0.164377 (0.164377)  time: 2.708788  data: 2.412748  max mem: 5286
+Epoch: [4/10]  [3/4]  eta: 0:00:00  loss: 11.143111 (11.162946)  lr: 0.000018 (0.000019)  wd: 0.177980 (0.185019)  time: 0.896213  data: 0.603257  max mem: 5286
+Epoch: [4/10] Total time: 0:00:03 (0.940912 s / it)
+Averaged stats: loss: 11.143111 (11.162946)  lr: 0.000018 (0.000019)  wd: 0.177980 (0.185019)
+Epoch: [5/10]  [0/4]  eta: 0:00:06  loss: 11.160718 (11.160718)  lr: 0.000016 (0.000016)  wd: 0.220000 (0.220000)  time: 1.737727  data: 1.379850  max mem: 5286
+Epoch: [5/10]  [3/4]  eta: 0:00:00  loss: 11.160718 (11.178826)  lr: 0.000014 (0.000014)  wd: 0.234123 (0.241075)  time: 0.768657  data: 0.460193  max mem: 5287
+Epoch: [5/10] Total time: 0:00:03 (0.817376 s / it)
+Averaged stats: loss: 11.160718 (11.178826)  lr: 0.000014 (0.000014)  wd: 0.234123 (0.241075)
+Epoch: [6/10]  [0/4]  eta: 0:00:13  loss: 11.171981 (11.171981)  lr: 0.000011 (0.000011)  wd: 0.275623 (0.275623)  time: 3.305696  data: 2.995851  max mem: 5289
+Epoch: [6/10]  [3/4]  eta: 0:00:01  loss: 11.179196 (11.200181)  lr: 0.000009 (0.000010)  wd: 0.288883 (0.295069)  time: 1.045432  data: 0.749025  max mem: 5289
+Epoch: [6/10] Total time: 0:00:04 (1.090268 s / it)
+Averaged stats: loss: 11.179196 (11.200181)  lr: 0.000009 (0.000010)  wd: 0.288883 (0.295069)
+Epoch: [7/10]  [0/4]  eta: 0:00:09  loss: 11.215797 (11.215797)  lr: 0.000007 (0.000007)  wd: 0.325801 (0.325801)  time: 2.446638  data: 2.126905  max mem: 5289
+Epoch: [7/10]  [3/4]  eta: 0:00:00  loss: 11.182599 (11.196048)  lr: 0.000005 (0.000006)  wd: 0.336901 (0.341714)  time: 0.830822  data: 0.531796  max mem: 5289
+Epoch: [7/10] Total time: 0:00:03 (0.873908 s / it)
+Averaged stats: loss: 11.182599 (11.196048)  lr: 0.000005 (0.000006)  wd: 0.336901 (0.341714)
+Epoch: [8/10]  [0/4]  eta: 0:00:12  loss: 11.241697 (11.241697)  lr: 0.000004 (0.000004)  wd: 0.365623 (0.365623)  time: 3.099120  data: 2.786290  max mem: 5289
+Epoch: [8/10]  [3/4]  eta: 0:00:01  loss: 11.186400 (11.200276)  lr: 0.000003 (0.000003)  wd: 0.373475 (0.376444)  time: 1.017861  data: 0.696614  max mem: 5289
+Epoch: [8/10] Total time: 0:00:04 (1.060606 s / it)
+Averaged stats: loss: 11.186400 (11.200276)  lr: 0.000003 (0.000003)  wd: 0.373475 (0.376444)
+Epoch: [9/10]  [0/4]  eta: 0:00:10  loss: 11.240783 (11.240783)  lr: 0.000002 (0.000002)  wd: 0.391190 (0.391190)  time: 2.701365  data: 2.389124  max mem: 5289
+Epoch: [9/10]  [3/4]  eta: 0:00:00  loss: 11.215082 (11.218474)  lr: 0.000001 (0.000001)  wd: 0.395027 (0.395861)  time: 0.894974  data: 0.597323  max mem: 5289
+Epoch: [9/10] Total time: 0:00:03 (0.941025 s / it)
+Averaged stats: loss: 11.215082 (11.218474)  lr: 0.000001 (0.000001)  wd: 0.395027 (0.395861)

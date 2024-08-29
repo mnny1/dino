@@ -33,6 +33,13 @@ from torchvision import models as torchvision_models
 import utils
 import vision_transformer as vits
 from vision_transformer import DINOHead
+from custom_utils import NCTDataset, TokenSelectionWrapper
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import cv2
+import timm
+import wandb
+
 
 torchvision_archs = sorted(name for name in torchvision_models.__dict__
     if name.islower() and not name.startswith("__")
@@ -44,7 +51,7 @@ def get_args_parser():
     # Model parameters
     parser.add_argument('--arch', default='vit_small', type=str,
         choices=['vit_tiny', 'vit_small', 'vit_base', 'xcit', 'deit_tiny', 'deit_small'] \
-                + torchvision_archs + torch.hub.list("facebookresearch/xcit:main"),
+                + torchvision_archs + torch.hub.list("facebookresearch/xcit:main") + ["uni"],
         help="""Name of architecture to train. For quick experiments with ViTs,
         we recommend using vit_tiny or vit_small.""")
     parser.add_argument('--patch_size', default=16, type=int, help="""Size in pixels
@@ -126,10 +133,29 @@ def get_args_parser():
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
+    
+    # Custom
+    parser.add_argument('--model_path', default='/path/to/model/', type=str,
+        help='Path to model weights.')
+    parser.add_argument('--json_path', default='/path/to/json/files.json/', type=str,
+        help='Please specify path to the jsons bounding box.')
+    parser.add_argument('--file_extension', default='.tif', type=str,
+        help='file extension for image files')
+    parser.add_argument('--padding', default='1', type=int,
+        help='neighbouring patches to consider')
     return parser
 
 
 def train_dino(args):
+    
+    # start wandb run
+    wandb.init(project='uni_cell_dino', config={
+        "lr" : args.lr,
+        "weight_decay" : args.weight_decay,
+        "epochs" : args.epochs,
+        "batch_size": args.batch_size_per_gpu
+    })
+    
     utils.init_distributed_mode(args)
     utils.fix_random_seeds(args.seed)
     print("git:\n  {}\n".format(utils.get_sha()))
@@ -142,7 +168,8 @@ def train_dino(args):
         args.local_crops_scale,
         args.local_crops_number,
     )
-    dataset = datasets.ImageFolder(args.data_path, transform=transform)
+    #dataset = datasets.ImageFolder(args.data_path, transform=transform)
+    dataset = NCTDataset(args.data_path, args.file_extension, args.json_path, transform=transform)
     sampler = torch.utils.data.DistributedSampler(dataset, shuffle=True)
     data_loader = torch.utils.data.DataLoader(
         dataset,
@@ -176,6 +203,38 @@ def train_dino(args):
         student = torchvision_models.__dict__[args.arch]()
         teacher = torchvision_models.__dict__[args.arch]()
         embed_dim = student.fc.weight.shape[1]
+    elif args.arch == "uni":
+        student = timm.create_model(
+                "vit_large_patch16_224", 
+                img_size=224, 
+                patch_size=16, 
+                init_values=1e-5, 
+                num_classes=0, 
+                dynamic_img_size=True
+        )
+        student.load_state_dict(torch.load(args.model_path), strict=True)
+        teacher = timm.create_model(
+                "vit_large_patch16_224", 
+                img_size=224, 
+                patch_size=16, 
+                init_values=1e-5, 
+                num_classes=0, 
+                dynamic_img_size=True
+        )
+        teacher.load_state_dict(torch.load(args.model_path), strict=True)
+        embed_dim = student.embed_dim
+        
+        freeze_blocks = [21, 22, 23]
+        for name, param in student.named_parameters():
+            if any(f"blocks.{i}." in name for i in freeze_blocks):
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+        print(f"All layers frozen except blocks {freeze_blocks}")
+        
+        # student = UNI_cell(model_path='/mnt/volume/mathias/pretrained_models/pytorch_model.bin')
+        # teacher = UNI_cell(model_path='/mnt/volume/mathias/pretrained_models/pytorch_model.bin')
+        # embed_dim = student.embed_dim                    
     else:
         print(f"Unknow architecture: {args.arch}")
 
@@ -190,6 +249,12 @@ def train_dino(args):
         teacher,
         DINOHead(embed_dim, args.out_dim, args.use_bn_in_head),
     )
+    
+    if args.arch == "uni":
+        student = TokenSelectionWrapper(student, True, args.patch_size, args.padding)
+        teacher = TokenSelectionWrapper(teacher, False, args.patch_size, args.padding)
+        print("TokenSelectionWrapper for student & teacher")
+    
     # move networks to gpu
     student, teacher = student.cuda(), teacher.cuda()
     # synchronize batch norms (if any)
@@ -295,6 +360,9 @@ def train_dino(args):
                 f.write(json.dumps(log_stats) + "\n")
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    
+    wandb.finish()
+    
     print('Training time {}'.format(total_time_str))
 
 
@@ -303,7 +371,7 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
                     fp16_scaler, args):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Epoch: [{}/{}]'.format(epoch, args.epochs)
-    for it, (images, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
+    for it, (images, masks) in enumerate(metric_logger.log_every(data_loader, 10, header)):
         # update weight decay and learning rate according to their schedule
         it = len(data_loader) * epoch + it  # global training iteration
         for i, param_group in enumerate(optimizer.param_groups):
@@ -313,10 +381,11 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
 
         # move images to gpu
         images = [im.cuda(non_blocking=True) for im in images]
+        masks = [ma.cuda(non_blocking=True) for ma in masks]
         # teacher and student forward passes + compute dino loss
         with torch.cuda.amp.autocast(fp16_scaler is not None):
-            teacher_output = teacher(images[:2])  # only the 2 global views pass through the teacher
-            student_output = student(images)
+            teacher_output = teacher(images[:2], masks[:2])  # only the 2 global views pass through the teacher
+            student_output = student(images, masks)
             loss = dino_loss(student_output, teacher_output, epoch)
 
         if not math.isfinite(loss.item()):
@@ -349,11 +418,17 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
             for param_q, param_k in zip(student.module.parameters(), teacher_without_ddp.parameters()):
                 param_k.data.mul_(m).add_((1 - m) * param_q.detach().data)
 
+        wandb.log({'train_loss' : loss.item()})
+
         # logging
         torch.cuda.synchronize()
         metric_logger.update(loss=loss.item())
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         metric_logger.update(wd=optimizer.param_groups[0]["weight_decay"])
+
+    # Log metrics to W&B
+    #wandb.log({'train_loss' : metric_logger.meters['loss'].global_avg})
+    
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
@@ -415,55 +490,60 @@ class DINOLoss(nn.Module):
         # ema update
         self.center = self.center * self.center_momentum + batch_center * (1 - self.center_momentum)
 
-
 class DataAugmentationDINO(object):
-    def __init__(self, global_crops_scale, local_crops_scale, local_crops_number):
-        flip_and_color_jitter = transforms.Compose([
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomApply(
-                [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
-                p=0.8
-            ),
-            transforms.RandomGrayscale(p=0.2),
+    def __init__(self, global_crops_scale, local_crops_scale, local_crops_number):  
+        flip_and_color_jitter = A.Compose([
+            A.HorizontalFlip(p=0.5),
+            A.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8),
+            A.ToGray(p=0.2),
         ])
-        normalize = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        normalize = A.Compose([
+            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            ToTensorV2(),
         ])
 
         # first global crop
-        self.global_transfo1 = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=global_crops_scale, interpolation=Image.BICUBIC),
+        self.global_transfo1 = A.Compose([
+            A.RandomResizedCrop(224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC),
             flip_and_color_jitter,
-            utils.GaussianBlur(1.0),
+            A.GaussianBlur(p=1.0, sigma_limit=(0.1, 2.0), blur_limit=(3, 7)), # play with blur limit
             normalize,
         ])
         # second global crop
-        self.global_transfo2 = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=global_crops_scale, interpolation=Image.BICUBIC),
+        self.global_transfo2 = A.Compose([
+            A.RandomResizedCrop(224, 224, scale=global_crops_scale, interpolation=cv2.INTER_CUBIC),
             flip_and_color_jitter,
-            utils.GaussianBlur(0.1),
-            utils.Solarization(0.2),
+            A.GaussianBlur(p=0.1, sigma_limit=(0.1, 2.0), blur_limit=(3, 7)), # play with blur limit
+            A.Solarize(p=0.2), # play with threshold
             normalize,
         ])
         # transformation for the local small crops
         self.local_crops_number = local_crops_number
-        self.local_transfo = transforms.Compose([
-            transforms.RandomResizedCrop(96, scale=local_crops_scale, interpolation=Image.BICUBIC),
+        self.local_transfo = A.Compose([
+            A.RandomResizedCrop(96, 96, scale=local_crops_scale, interpolation=cv2.INTER_CUBIC),
             flip_and_color_jitter,
-            utils.GaussianBlur(p=0.5),
+            A.GaussianBlur(p=0.5, sigma_limit=(0.1, 2.0), blur_limit=(3, 7)), # play with limit
             normalize,
         ])
 
-    def __call__(self, image):
+    def __call__(self, image, mask):
+        image = np.array(image)
+        mask = np.array(mask)
         crops = []
-        crops.append(self.global_transfo1(image))
-        crops.append(self.global_transfo2(image))
+        masks = []
+        aug = self.global_transfo1(image=image, mask=mask)
+        crops.append(aug['image'])
+        masks.append(aug['mask'])
+        aug = self.global_transfo2(image=image, mask=mask)
+        crops.append(aug['image'])
+        masks.append(aug['mask'])
         for _ in range(self.local_crops_number):
-            crops.append(self.local_transfo(image))
-        return crops
-
-
+            aug = self.local_transfo(image=image, mask=mask)
+            crops.append(aug['image'])
+            masks.append(aug['mask'])
+        return {'image': crops, 'mask': masks}
+        
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DINO', parents=[get_args_parser()])
     args = parser.parse_args()

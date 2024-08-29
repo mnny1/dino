@@ -1,0 +1,78 @@
+Will run the code on one GPU.
+| distributed init (rank 0): env://
+git:
+  sha: 7c446df5b9f45747937fb0d72314eb9f7b66930a, status: has uncommited changes, branch: main
+arch: uni
+batch_size_per_gpu: 16
+clip_grad: 3.0
+data_path: /mnt/volume/datasets/NCT-CRC-HE-100K/
+dist_url: env://
+drop_path_rate: 0.1
+epochs: 10
+file_extension: .tif
+freeze_last_layer: 1
+global_crops_scale: (0.4, 1.0)
+gpu: 0
+json_path: /mnt/volume/sabrina/cellvit_seg/NCT
+local_crops_number: 8
+local_crops_scale: (0.05, 0.4)
+local_rank: 0
+lr: 0.0005
+min_lr: 1e-06
+model_path: /mnt/volume/mathias/pretrained_models/pytorch_model.bin
+momentum_teacher: 0.996
+norm_last_layer: True
+num_workers: 10
+optimizer: adamw
+out_dim: 65536
+output_dir: /mnt/volume/mathias/outputs/test_dino_output/
+padding: 1
+patch_size: 16
+rank: 0
+saveckp_freq: 20
+seed: 0
+teacher_temp: 0.04
+use_bn_in_head: False
+use_fp16: True
+warmup_epochs: 0
+warmup_teacher_temp: 0.04
+warmup_teacher_temp_epochs: 0
+weight_decay: 0.04
+weight_decay_end: 0.4
+world_size: 1
+Using cache found in /home/mathias/.cache/torch/hub/facebookresearch_xcit_main
+Data loaded: there are 64 images.
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/mathias/dino/main_dino.py", line 557, in <module>
+[rank0]:     train_dino(args)
+[rank0]:   File "/home/mathias/dino/main_dino.py", line 220, in train_dino
+[rank0]:     teacher = timm.create_model(
+[rank0]:               ^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/timm/models/_factory.py", line 117, in create_model
+[rank0]:     model = create_fn(
+[rank0]:             ^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/timm/models/vision_transformer.py", line 2151, in vit_large_patch16_224
+[rank0]:     model = _create_vision_transformer('vit_large_patch16_224', pretrained=pretrained, **dict(model_args, **kwargs))
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/timm/models/vision_transformer.py", line 2002, in _create_vision_transformer
+[rank0]:     return build_model_with_cfg(
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/timm/models/_builder.py", line 406, in build_model_with_cfg
+[rank0]:     model = model_cls(**kwargs)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/timm/models/vision_transformer.py", line 540, in __init__
+[rank0]:     block_fn(
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/timm/models/vision_transformer.py", line 155, in __init__
+[rank0]:     self.mlp = mlp_layer(
+[rank0]:                ^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/timm/layers/mlp.py", line 34, in __init__
+[rank0]:     self.fc1 = linear_layer(in_features, hidden_features, bias=bias[0])
+[rank0]:                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/torch/nn/modules/linear.py", line 103, in __init__
+[rank0]:     self.reset_parameters()
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/torch/nn/modules/linear.py", line 109, in reset_parameters
+[rank0]:     init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/torch/nn/init.py", line 459, in kaiming_uniform_
+[rank0]:     return tensor.uniform_(-bound, bound, generator=generator)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: KeyboardInterrupt

@@ -1,0 +1,99 @@
+Will run the code on one GPU.
+| distributed init (rank 0): env://
+git:
+  sha: 7c446df5b9f45747937fb0d72314eb9f7b66930a, status: has uncommited changes, branch: main
+arch: uni
+batch_size_per_gpu: 16
+clip_grad: 3.0
+data_path: /mnt/volume/datasets/NCT-CRC-HE-100K/
+dist_url: env://
+drop_path_rate: 0.1
+epochs: 10
+file_extension: .tif
+freeze_last_layer: 1
+global_crops_scale: (0.4, 1.0)
+gpu: 0
+json_path: /mnt/volume/sabrina/cellvit_seg/NCT
+local_crops_number: 8
+local_crops_scale: (0.05, 0.4)
+local_rank: 0
+lr: 0.0005
+min_lr: 1e-06
+model_path: /mnt/volume/mathias/pretrained_models/pytorch_model.bin
+momentum_teacher: 0.996
+norm_last_layer: True
+num_workers: 10
+optimizer: adamw
+out_dim: 65536
+output_dir: /mnt/volume/mathias/outputs/test_dino_output/
+padding: 1
+patch_size: 16
+rank: 0
+saveckp_freq: 20
+seed: 0
+teacher_temp: 0.04
+use_bn_in_head: False
+use_fp16: True
+warmup_epochs: 0
+warmup_teacher_temp: 0.04
+warmup_teacher_temp_epochs: 0
+weight_decay: 0.04
+weight_decay_end: 0.4
+world_size: 1
+Data loaded: there are 64 images.
+Using cache found in /home/mathias/.cache/torch/hub/facebookresearch_xcit_main
+/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/torch/nn/utils/weight_norm.py:28: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+All layers frozen except blocks [21, 22, 23]
+TokenSelectionWrapper for student & teacher
+Student and Teacher are built: they are both uni network.
+Loss, optimizer and schedulers ready.
+Starting DINO training !
+Epoch: [0/10]  [0/4]  eta: 0:00:25  loss: 11.063110 (11.063110)  lr: 0.000031 (0.000031)  wd: 0.040000 (0.040000)  time: 6.351697  data: 3.097254  max mem: 4577
+Epoch: [0/10]  [3/4]  eta: 0:00:01  loss: 10.938888 (10.968443)  lr: 0.000031 (0.000031)  wd: 0.040555 (0.041936)  time: 1.806478  data: 0.774380  max mem: 5094
+Epoch: [0/10] Total time: 0:00:07 (1.842650 s / it)
+dict_keys(['loss', 'lr', 'wd'])
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/mathias/dino/main_dino.py", line 557, in <module>
+[rank0]:     train_dino(args)
+[rank0]:   File "/home/mathias/dino/main_dino.py", line 342, in train_dino
+[rank0]:     train_stats = train_one_epoch(student, teacher, teacher_without_ddp, dino_loss,
+[rank0]:                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/dino/main_dino.py", line 433, in train_one_epoch
+[rank0]:     wandb.log({
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 420, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 371, in wrapper_fn
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 361, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 1838, in log
+[rank0]:     self._log(data=data, step=step, commit=commit)
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 1602, in _log
+[rank0]:     self._partial_history_callback(data, step, commit)
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/sdk/wandb_run.py", line 1474, in _partial_history_callback
+[rank0]:     self._backend.interface.publish_partial_history(
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/sdk/interface/interface.py", line 596, in publish_partial_history
+[rank0]:     item.value_json = json_dumps_safer_history(v)
+[rank0]:                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/util.py", line 842, in json_dumps_safer_history
+[rank0]:     return dumps(obj, cls=WandBHistoryJSONEncoder, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/json/__init__.py", line 238, in dumps
+[rank0]:     **kw).encode(obj)
+[rank0]:           ^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/json/encoder.py", line 200, in encode
+[rank0]:     chunks = self.iterencode(o, _one_shot=True)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/json/encoder.py", line 258, in iterencode
+[rank0]:     return _iterencode(o, 0)
+[rank0]:            ^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/site-packages/wandb/util.py", line 807, in default
+[rank0]:     return json.JSONEncoder.default(self, obj)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/mathias/.conda/envs/masterpraktikum/lib/python3.12/json/encoder.py", line 180, in default
+[rank0]:     raise TypeError(f'Object of type {o.__class__.__name__} '
+[rank0]: TypeError: Object of type SmoothedValue is not JSON serializable

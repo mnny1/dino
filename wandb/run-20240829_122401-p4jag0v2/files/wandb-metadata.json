@@ -1,0 +1,153 @@
+{
+    "os": "Linux-5.4.0-193-generic-x86_64-with-glibc2.31",
+    "python": "3.12.4",
+    "heartbeatAt": "2024-08-29T12:24:01.841532",
+    "startedAt": "2024-08-29T12:24:01.097358",
+    "docker": null,
+    "cuda": "11.0.207",
+    "args": [
+        "--arch",
+        "uni",
+        "--model_path",
+        "/mnt/volume/mathias/pretrained_models/pytorch_model.bin",
+        "--data_path",
+        "/mnt/volume/datasets/NCT-CRC-HE-100K/",
+        "--json_path",
+        "/mnt/volume/sabrina/cellvit_seg/NCT",
+        "--file_extension",
+        ".tif",
+        "--output_dir",
+        "/mnt/volume/mathias/outputs/test_dino_output/",
+        "--epochs",
+        "10",
+        "--warmup_epochs",
+        "0",
+        "--batch_size_per_gpu",
+        "16",
+        "--saveckp_freq",
+        "2"
+    ],
+    "state": "running",
+    "program": "/home/mathias/dino/main_dino.py",
+    "codePathLocal": "main_dino.py",
+    "codePath": "main_dino.py",
+    "git": {
+        "remote": "https://github.com/facebookresearch/dino.git",
+        "commit": "7c446df5b9f45747937fb0d72314eb9f7b66930a"
+    },
+    "email": "ma.nguyen@campus.lmu.de",
+    "root": "/home/mathias/dino",
+    "host": "spatialclip",
+    "username": "mathias",
+    "executable": "/home/mathias/.conda/envs/masterpraktikum/bin/python",
+    "cpu_count": 16,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 2299.9959999999996,
+        "min": 0.0,
+        "max": 0.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2299.996,
+            "min": 0.0,
+            "max": 0.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 96.73210144042969,
+            "used": 87.19125366210938
+        }
+    },
+    "gpu": "Tesla V100-SXM2-32GB",
+    "gpu_count": 2,
+    "gpu_devices": [
+        {
+            "name": "Tesla V100-SXM2-32GB",
+            "memory_total": 34359738368
+        },
+        {
+            "name": "Tesla V100-SXM2-32GB",
+            "memory_total": 34359738368
+        }
+    ],
+    "memory": {
+        "total": 167.04924392700195
+    }
+}
