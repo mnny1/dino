@@ -10,7 +10,6 @@ from torch import nn
 import torch.nn.functional as F
 from einops import rearrange
 
-
 class TokenSelectionWrapper(nn.Module):
     def __init__(self, model, student: bool, patch_size=16, padding=1):
         super(TokenSelectionWrapper, self).__init__()
@@ -18,30 +17,37 @@ class TokenSelectionWrapper(nn.Module):
         self.student = student
         self.patch_size = patch_size
         self.padding = padding
+        self.px_threshold = int(patch_size**2 * 0.15)
+        self.tk_threshold = 0.65
         
-    def __dilate_tensor_mask(self, mask, padding=1):
+    def __dilate_tensor_mask(self, mask, padding):
         window = 2 * padding + 1
         kernel = torch.ones((1, 1, window, window), dtype=torch.float32).cuda()
         mask = mask.unsqueeze(1).float()
         dilated_mask = F.conv2d(mask.float(), kernel, padding=window // 2)
         dilated_mask = torch.clamp(dilated_mask, 0, 1)
         return dilated_mask.permute(0, 2, 3, 1)
-        
+    
+    def __mask_above_threshold(self, mask_batch, threshold):
+        reshaped_masks = rearrange(mask_batch, 'b h w c -> b (h w) c')
+        condition = torch.any(reshaped_masks, dim=-1).sum(dim=-1) < threshold
+        mask_batch[condition] = 1
+        return mask_batch
+
     def forward(self, x, masks):
         if self.student:
-            masks = map(lambda t: rearrange(t, 'b (ht p1) (wt p2) -> b ht wt (p1 p2)', p1=self.patch_size, p2=self.patch_size), masks) # mask: [bx14x14x256, bx14x14x256, bx14x14x256, bx14x14x256]
-            masks = map(lambda t: (t.sum(dim=-1) >= 39).float(), masks) # len=5, [[4,14,14], [4,14,14], [4,14,14], [4,14,14], [4,14,14]]
-            masks = map(lambda t: self.__dilate_tensor_mask(t, self.padding) , masks) # len=5, [[4,14,14,1], [4,14,14,1], [4,14,14,1], [4,14,14,1], [4,14,14,1]], dilated
-            x = map(lambda t: rearrange(t, 'b c (ht p1) (wt p2) -> b ht wt (p1 p2 c)', p1=self.patch_size, p2=self.patch_size), x) # img: [[bx14x14x768], [bx14x14x768], [bx14x14x768], [bx14x14x768]]
-            x = map(lambda z, y: z * y, x, masks)
-            x = list(map(lambda t: rearrange(t, 'b ht wt (p1 p2 c) -> b c (ht p1) (wt p2)', p1=self.patch_size, p2=self.patch_size), x)) # [[b, 3, 224, 224], [b, 3, 224, 224], [b, 3, 224, 224]]
+            masks = map(lambda t: rearrange(t, 'b (ht p1) (wt p2) -> b ht wt (p1 p2)', p1=self.patch_size, p2=self.patch_size), masks) # mask tokenized : len=3 [bx14x14x256, bx14x14x256, bx14x14x256]
+            masks = map(lambda t: self.__mask_above_threshold(t, int(t.shape[1]**2 * self.tk_threshold)), masks) # assign 1 to every mask under tk_threshold
+            masks = map(lambda t: (t.sum(dim=-1) >= self.px_threshold).float(), masks) # mask tokens selected : len=3, [[4,14,14], [4,14,14], [4,14,14]]
+            masks = map(lambda t: self.__dilate_tensor_mask(t, self.padding) , masks) # mask tokens dilated : len=3, [[4,14,14,1], [4,14,14,1], [4,14,14,1]]
+            x = map(lambda t: rearrange(t, 'b c (ht p1) (wt p2) -> b ht wt (p1 p2 c)', p1=self.patch_size, p2=self.patch_size), x) # img tokenized : [[bx14x14x768], [bx14x14x768]]
+            x = map(lambda z, y: z * y, x, masks) # img tokens selected
+            x = list(map(lambda t: rearrange(t, 'b ht wt (p1 p2 c) -> b c (ht p1) (wt p2)', p1=self.patch_size, p2=self.patch_size), x)) # img.shape restored : [[b, 3, 224, 224], [b, 3, 224, 224], [b, 3, 224, 224]]
         return self.model(x)
-    
 
 
 class NCTDataset(Dataset):
     def __init__(self, img_dir, file_extension,json_dir, transform:list =None):
-        ################ DEBUG ############################   
         self.img_paths = sorted(Path(img_dir).glob(f"**/*{file_extension}"))#[:64] # ADI total: 10407
         self.img_list = [Image.open(path) for path in self.img_paths]  
         self.mask_dict = self.__read_bbox(json_dir)
@@ -82,6 +88,24 @@ class NCTDataset(Dataset):
         return mask_dict
 
 
+# class NCTDataset(Dataset):
+#     """
+#     dataset for patches e.g NCT-CRC-100k
+#     """
+#     def __init__(self, img_dir, file_extension,json_dir, transform:list =None):              
+#         self.img_paths = sorted(Path(img_dir).glob(f"**/*{file_extension}"))
+#         self.img_list = [Image.open(path) for path in self.img_paths]
+#         self.transform = transform
+                        
+#     def __len__(self):
+#         return len(self.img_list)
+
+#     def __getitem__(self, idx):
+#         img = self.img_list[idx]                
+#         if self.transform:
+#             img = self.transform(img)
+#         return img, 0
+
 # class UNI_cell(nn.Module):
 #     def __init__(self, model_path, freeze_blocks=[22, 23, 24]):
 #         super(UNI_cell, self).__init__()
@@ -105,67 +129,3 @@ class NCTDataset(Dataset):
     
 #     def forward(self, x):
 #         return self.model(x)
-
-
-# class NCTDataset(Dataset):
-#     """
-#     dataset for patches e.g NCT-CRC-100k
-#     """
-#     def __init__(self, img_dir, file_extension,json_dir, transform:list =None):              
-#         self.img_paths = sorted(Path(img_dir).glob(f"**/*{file_extension}"))
-#         self.img_list = [Image.open(path) for path in self.img_paths]
-#         self.transform = transform
-                        
-#     def __len__(self):
-#         return len(self.img_list)
-
-#     def __getitem__(self, idx):
-#         img = self.img_list[idx]                
-#         if self.transform:
-#             img = self.transform(img)
-#         return img, 0
-
-
-# class ST_Bag_Dataset():
-#     def __init__(self, data_root, transform=None):
-#         self.data_root = Path(data_root)
-        
-#         # test_keys = {
-#         #     'TENX110', 'TENX119', 'TENX122', 'TENX134'
-#         # }
-        
-#         # normal_sample_keys = {
-#         #     'NCBI783', 'NCBI784', 'NCBI785', 'TENX94', 'TENX95', 'TENX96', 'TENX97', 'TENX98', 'TENX99'
-#         #     'TENX105', 'TENX106', 'TENX111', 'TENX114', 'TENX115', 'TENX116', 'TENX117', 'TENX118', 'TENX120', 
-#         #     'TENX121', 'TENX123', 'TENX124', 'TENX125', 'TENX126', 'TENX127', 'TENX132', 'TENX133', 'TENX135', 
-#         #     'TENX136', 'TENX137', 'TENX138', 'TENX139', 'TENX140', 'TENX141', 'TENX142'
-#         # }
-        
-#         normal_sample_keys = {
-#             "TENX142"
-#         }
-        
-#         data_list = os.listdir(data_root)
-#         data_list = {i.split(".")[0] : self.data_root / i for i in data_list if i.split(".")[0] in normal_sample_keys}
-#         self.transform = transform
-#         self.images = []
-        
-#         counter = 0
-#         for path in data_list.values():
-#             self.images.extend(h5py.File(path,'r')["img"][:])
-#             counter +=1
-#             print(f"read file: {counter}")
-             
-            
-#     def __len__(self):
-#         return len(self.images)
-    
-#     def __getitem__(self, idx):
-#         image = self.images[idx]
-#         image = Image.fromarray(image)
-        
-#         if self.transform:
-#             image = self.transform(image)
-            
-#         # tuple w/ 2 items to make it work with dino training loop, they use datasets.ImageFolder which returns (img, <class_number>)
-#         return (image, 0)
